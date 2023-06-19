@@ -1,0 +1,25 @@
+[package]
+name = "mempool-client"
+authors = ["dev7ba <dev7ba@protonmail.com>"]
+version = "0.1.0"
+description = "Copy bitcoin transactions from mempool-server to a target bitcoin node"
+edition = "2021"
+keywords = ["bitcoin", "mempool"]
+categories = ["command-line-utilities","cryptography::cryptocurrencies"]
+license = "MIT OR Apache-2.0"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[dependencies]
+reqwest = { version = "0.11", features = ["stream"] }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+futures-util = "0.3"
+bytes = "1"
+hex = "0.4.3"
+bitcoincore-rpc = "0.17.0"
+serde = { version = "1", features = [ "derive" ] }
+config = "0.13.3"
+url = { version = "2.3.1", features = ["serde"] }
+anyhow = "1.0"
+indicatif = "0.17.3"
