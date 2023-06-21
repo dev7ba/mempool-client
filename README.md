@@ -28,7 +28,7 @@ First, you must have a `config.toml` file in the same directory as your executab
   # Bitcoin node ipaddr for rpc interface
   ipaddr = "127.0.0.1"
   ```
-Cookie authentication is the default for latest versions of Bitcoin core. You must have configured in your `bitcoin.conf` the values `rpcbind=my_ip` and `rpcallowip=my_ip` for the RPC interface to work.
+Cookie authentication is the default for latest versions of Bitcoin core. You must have configured your `bitcoin.conf` with the values `rpcbind=my_ip` and `rpcallowip=my_ip` for the RPC interface to work.
 
 Compilling instructions
 -----------------------
