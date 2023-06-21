@@ -5,6 +5,8 @@ Mempool-client is a command-line program to ask to [mempool-server](https://gith
 
 The main purpose of mempool-server/client is to be able to fill a just-started Bitcoin node with transactions from another mempool, avoiding the time necessary for a node to 'sync with the mempool'. Be aware that there is not such a thing as a global mempool, so differences between nodes are expected.
 
+[diagram](./resources/diagram.png)
+
 How does it works?
 ------------------
 
