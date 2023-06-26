@@ -93,7 +93,7 @@ fn get_client_user_passw(ip: &str, user_name: String, passwd: String) -> anyhow:
 
 async fn do_get(url_base: &Url, bcc: &Client, err_vec: &mut Vec<String>) -> Result<u64> {
     let url = url_base
-        .join("/mempool/txsdata")
+        .join("/mempoolServer/txsdata")
         .context("Error parsing url")?;
     println!("Getting data from: {}", url);
     let mut stream = reqwest::get(url.to_string()).await?.bytes_stream();
@@ -166,7 +166,7 @@ async fn do_get_from(
     from: &u64,
     err_vec: &mut Vec<String>,
 ) -> Result<u64> {
-    let urlstr = format!("/mempool/txsdatafrom/{}", from);
+    let urlstr = format!("/mempoolServer/txsdatafrom/{}", from);
     let url = url_base.join(&urlstr).context("Error parsing url")?;
     println!("Getting data from: {}", url);
 
