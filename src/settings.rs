@@ -1,5 +1,7 @@
 use config::{Config, ConfigError, File};
+use dirs;
 use serde::Deserialize;
+use std::default::Default;
 use std::fmt;
 use std::{env, path::PathBuf};
 
@@ -22,8 +24,7 @@ pub struct Settings {
     pub bitcoind_client: BitcoindClient,
 }
 
-///Settings can be loaded from config.toml file located in the executable directory or from env
-///variables. environment variables takes precedence.
+///Settings can be loaded from config.toml file located in the executable directory
 /// Note that toml must have have all variable names in lowercase without '_' separators
 /// ```
 /// [bitcoindclient]
@@ -37,10 +38,30 @@ impl Settings {
         let mut path = env::current_exe().unwrap();
         path.pop();
         path.push("config.toml");
-        let s = Config::builder()
-            .add_source(File::with_name(path.to_str().unwrap()).required(false))
-            .build()?;
-        s.try_deserialize()
+        if path.exists() {
+            let s = Config::builder()
+                .add_source(File::with_name(path.to_str().unwrap()).required(false))
+                .build()?;
+            s.try_deserialize()
+        } else {
+            Ok(Settings::default())
+        }
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        let mut path = dirs::home_dir().unwrap();
+        path.push(".bitcoin/.cookie");
+
+        Settings {
+            bitcoind_client: BitcoindClient {
+                cookie_auth_path: Some(path),
+                ip_addr: String::from("localhost"),
+                user: None,
+                passwd: None,
+            },
+        }
     }
 }
 
@@ -52,6 +73,8 @@ impl fmt::Debug for BitcoindClient {
             .field("ip_addr", &self.ip_addr)
             .field("user", &"****")
             .field("passwd", &"****")
+            .field("user", &self.user)
+            .field("passwd", &self.passwd)
             .finish()
     }
 }

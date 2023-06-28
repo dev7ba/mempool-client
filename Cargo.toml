@@ -23,3 +23,5 @@ config = "0.13.3"
 url = { version = "2.3.1", features = ["serde"] }
 anyhow = "1.0"
 indicatif = "0.17.3"
+dirs = "5.0.1"
+colored = "2.0.0"

@@ -3,6 +3,8 @@ use bitcoincore_rpc::RpcApi;
 use bitcoincore_rpc::{Auth, Client};
 use bytes::Buf;
 use bytes::Bytes;
+use colored::*;
+use config::ConfigError;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest;
@@ -15,68 +17,91 @@ mod settings;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let mut url: Url = Url::parse("https://mempoolexplorer.com").unwrap();
     if let Some(urlp) = env::args().nth(1) {
-        // println!("url: {}", urlp);
-        let url = Url::parse(urlp.as_str())?;
-        if let Ok(settings) = get_settings() {
-            // println!("Settings loaded");
-            if let Ok(bcc) = get_client(&settings) {
-                // println!("Client Ok");
-                let mut err_vec: Vec<String> = Vec::new();
-                let mut last_mpc = do_get(&url, &bcc, &mut err_vec).await?;
-                // println!("Last mpc: {}", last_mpc);
-                loop {
-                    let mpc = do_get_from(&url, &bcc, &last_mpc, &mut err_vec).await?;
-                    // println!("mpc: {}", mpc);
-                    if mpc == last_mpc || mpc == u64::MAX {
-                        break;
-                    }
-                    last_mpc = mpc;
-                }
-                // println!("Errors inserting txs: #{}", err_vec.len());
-                // err_vec.iter().for_each(|err| println!("{}", err));
-                println!("Finished loading transactions into mempool.");
-            } else {
-                println!("Client error, verify client address and authentication method in config.toml file");
-            }
+        if urlp == "--help" {
+            println!("Usage: mempool-client url");
+            println!("Default url: https://mempoolexplorer.com");
+            return Ok(());
         } else {
-            println!("Settings error");
+            url = Url::parse(urlp.as_str())?;
         }
-    } else {
-        println!("Usage: mempool-client url");
     }
-    Ok(())
+    match check_settings(Settings::new()) {
+        Ok(settings) => {
+            match check_client(get_client(&settings.bitcoind_client)) {
+                Ok(bcc) => {
+                    let mut err_vec: Vec<String> = Vec::new();
+                    let mut last_mpc = do_get(&url, &bcc, &mut err_vec).await?;
+                    loop {
+                        let mpc = do_get_from(&url, &bcc, &last_mpc, &mut err_vec).await?;
+                        if mpc == last_mpc || mpc == u64::MAX {
+                            break;
+                        }
+                        last_mpc = mpc;
+                    }
+                    // println!("Errors inserting txs: #{}", err_vec.len());
+                    // err_vec.iter().for_each(|err| println!("{}", err));
+                    println!("Finished loading transactions into mempool.");
+                    Ok(())
+                }
+                Err(e) => {
+                    print_client_error_advice(e);
+                    Ok(())
+                }
+            }
+        }
+        Err(e) => {
+            println!(
+                "{}{}",
+                "Error, cannot load all necessary settings from config.toml: ".red(),
+                e.to_string().red()
+            );
+            print_conf_toml_template();
+            Ok(())
+        }
+    }
 }
 
-fn get_settings() -> anyhow::Result<BitcoindClient> {
-    let settings = match Settings::new() {
-        Ok(settings) => settings,
-        Err(e) => {
-            println!("Error, cannot load all necessary settings from config.toml or environment variables: {}",e);
-            return Err(anyhow!("error:{}", e));
-        }
-    };
-    // println!("{:#?}", &settings);
+fn check_client(res: Result<Client>) -> Result<Client> {
+    match res {
+        Ok(client) => match client.get_mempool_info() {
+            Ok(_) => Ok(client),
+            Err(err) => Err(anyhow!("Cannot access to bitcoind node, Error: {}", err)),
+        },
+        Err(err) => Err(err),
+    }
+}
 
-    Ok(settings.bitcoind_client)
+// Checks if optional settings are ok since library can't do it for us.
+fn check_settings(res: Result<Settings, ConfigError>) -> Result<Settings, ConfigError> {
+    match res {
+        Ok(settings) => {
+            if settings.bitcoind_client.cookie_auth_path.is_some() {
+                Ok(settings)
+            } else if settings.bitcoind_client.user.is_some()
+                && settings.bitcoind_client.passwd.is_some()
+            {
+                Ok(settings)
+            } else {
+                Err(ConfigError::NotFound(
+                    "cookie_auth_path or user & password".to_string(),
+                ))
+            }
+        }
+        Err(e) => Err(e),
+    }
 }
 
 fn get_client(bcc: &BitcoindClient) -> anyhow::Result<Client, anyhow::Error> {
     let client = if let Some(path) = &bcc.cookie_auth_path {
         get_client_cookie(&bcc.ip_addr, path.clone())?
     } else {
-        if bcc.user.is_some() && bcc.passwd.is_some() {
-            get_client_user_passw(
-                &bcc.ip_addr,
-                bcc.user.as_ref().unwrap().clone(),
-                bcc.passwd.as_ref().unwrap().clone(),
-            )?
-        } else {
-            println!("Configuration error, no cookie_auth_path or user & password");
-            return Err(anyhow!(
-                "Configuration error, no cookie_auth_path or user & password"
-            ));
-        }
+        get_client_user_passw(
+            &bcc.ip_addr,
+            bcc.user.as_ref().unwrap().clone(),
+            bcc.passwd.as_ref().unwrap().clone(),
+        )?
     };
     Ok(client)
 }
@@ -91,11 +116,64 @@ fn get_client_user_passw(ip: &str, user_name: String, passwd: String) -> anyhow:
         .with_context(|| format!("Can't connect to bitcoind node: {}", ip))
 }
 
+fn print_client_error_advice(e: anyhow::Error) {
+    println!(
+        "{}{}{}",
+        "\nClient error: ".red().bold(),
+        e.to_string().red().bold(),
+        "\nCreate or verify client address and authentication method in config.toml file"
+            .red()
+            .bold(),
+    );
+    print_conf_toml_template();
+    println!(
+        "Be aware that you may have to check ~/.bitcoin/bitcoin.conf file to add these fields:"
+    );
+    println!(
+        "{}",
+        "
+#Your interface for rpc calls to bitcoind
+rpcbind=ip_address_here
+# Choose between cookieauthpath or user & passwd authentication. Default is cookieauthpath.
+rpccookiefile=/home/your_user/.bitcoin/.cookie
+rpcuser=your_user
+rpcpassword=your_password
+#Ip address of machine executing mempool-client
+rpcallowip=ip_address_here\n"
+            .dimmed()
+    );
+    println!(
+        "Check {} for more info.\n",
+        "https://github.com/dev7ba/mempool-client/blob/master/README.md"
+            .blue()
+            .dimmed()
+    );
+}
+
+fn print_conf_toml_template() {
+    println!("\nExample of config.toml file (in same path as this executable):");
+    println!(
+        "{}",
+        "\
+# File comments starts with #
+[bitcoindclient]
+    # Choose between cookieauthpath or user & passwd authentication.
+    # cookieauthpath takes precedence over user & passwd.
+    cookieauthpath = \"/home/myuser/.bitcoin/.cookie\" 
+    #user = \"my_user\"
+    #passwd = \"my_passwd\"
+    # Ip address where bitcoind instance is running, localhost by default.
+    ipaddr = \"localhost\"
+        "
+        .dimmed()
+    );
+}
+
 async fn do_get(url_base: &Url, bcc: &Client, err_vec: &mut Vec<String>) -> Result<u64> {
     let url = url_base
         .join("/mempoolServer/txsdata")
         .context("Error parsing url")?;
-    println!("Getting data from: {}", url);
+    println!("Getting data from: {}", url_base);
     let mut stream = reqwest::get(url.to_string()).await?.bytes_stream();
     let mut buf = Bytes::new();
     let mut magic: u64 = 0;
@@ -168,7 +246,7 @@ async fn do_get_from(
 ) -> Result<u64> {
     let urlstr = format!("/mempoolServer/txsdatafrom/{}", from);
     let url = url_base.join(&urlstr).context("Error parsing url")?;
-    println!("Getting data from: {}", url);
+    println!("Getting data from mempool sequence: {}", from);
 
     let mut stream = reqwest::get(url).await?.bytes_stream();
 
