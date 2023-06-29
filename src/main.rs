@@ -19,38 +19,47 @@ mod settings;
 async fn main() -> Result<()> {
     let mut url: Url = Url::parse("https://mempoolexplorer.com").unwrap();
     if let Some(urlp) = env::args().nth(1) {
-        if urlp == "--help" {
-            println!("Usage: mempool-client url");
-            println!("Default url: https://mempoolexplorer.com");
+        if urlp == "--help" || urlp == "-h" {
+            print_cmd_help();
             return Ok(());
         } else {
             url = Url::parse(urlp.as_str())?;
         }
     }
-    match check_settings(Settings::new()) {
-        Ok(settings) => {
-            match check_client(get_client(&settings.bitcoind_client)) {
-                Ok(bcc) => {
-                    let mut err_vec: Vec<String> = Vec::new();
-                    let mut last_mpc = do_get(&url, &bcc, &mut err_vec).await?;
-                    loop {
-                        let mpc = do_get_from(&url, &bcc, &last_mpc, &mut err_vec).await?;
-                        if mpc == last_mpc || mpc == u64::MAX {
-                            break;
-                        }
-                        last_mpc = mpc;
-                    }
-                    // println!("Errors inserting txs: #{}", err_vec.len());
-                    // err_vec.iter().for_each(|err| println!("{}", err));
-                    println!("Finished loading transactions into mempool.");
-                    Ok(())
-                }
-                Err(e) => {
-                    print_client_error_advice(e);
-                    Ok(())
-                }
-            }
+    let mut perr = false;
+    if let Some(print_err) = env::args().nth(2) {
+        if print_err == "-e" || print_err == "--errors" {
+            perr = true;
+        } else {
+            println!("Unknown option: {}", print_err);
+            print_cmd_help();
         }
+    }
+    match check_settings(Settings::new()) {
+        Ok(settings) => match check_client(get_client(&settings.bitcoind_client)) {
+            Ok(bcc) => {
+                let mut err_vec: Vec<String> = Vec::new();
+                let mut last_mpc = do_get(&url, &bcc, &mut err_vec).await?;
+                println!("Now inserting additional transactions received by the server while sending data...");
+                loop {
+                    let mpc = do_get_from(&url, &bcc, &last_mpc, &mut err_vec).await?;
+                    if mpc == last_mpc || mpc == u64::MAX {
+                        break;
+                    }
+                    last_mpc = mpc;
+                }
+                if perr {
+                    println!("Errors inserting txs: #{}", err_vec.len());
+                    err_vec.iter().for_each(|err| println!("{}", err));
+                }
+                println!("Finished loading transactions into mempool.");
+                Ok(())
+            }
+            Err(e) => {
+                print_client_error_advice(e);
+                Ok(())
+            }
+        },
         Err(e) => {
             println!(
                 "{}{}",
@@ -61,6 +70,19 @@ async fn main() -> Result<()> {
             Ok(())
         }
     }
+}
+
+fn print_cmd_help() {
+    println!("Usage: mempool-client url [options]\n");
+    println!("Options:");
+    println!(
+        "{}{}{}{}",
+        "  -e".dimmed(),
+        ", ",
+        "--errors".dimmed(),
+        ": prints errors while inserting txs into bitcoind node.\n"
+    );
+    println!("Default url: https://mempoolexplorer.com\n");
 }
 
 fn check_client(res: Result<Client>) -> Result<Client> {
@@ -246,7 +268,7 @@ async fn do_get_from(
 ) -> Result<u64> {
     let urlstr = format!("/mempoolServer/txsdatafrom/{}", from);
     let url = url_base.join(&urlstr).context("Error parsing url")?;
-    println!("Getting data from mempool sequence: {}", from);
+    println!("Getting data from the mempool sequence: {}", from);
 
     let mut stream = reqwest::get(url).await?.bytes_stream();
 
