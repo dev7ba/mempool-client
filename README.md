@@ -1,22 +1,22 @@
 Mempool-client
 ==============
 
-Mempool-client is a command-line program to ask to [mempool-server](https://github.com/dev7ba/mempool-server) for Bitcoin mempool transactions, then it injects those transactions into a Bitcoin node.
+Mempool-client is a command-line program that requests Bitcoin mempool transactions from [mempool-server](https://github.com/dev7ba/mempool-server) and injects them into a Bitcoin node.
 
-The main purpose of mempool-server/client is to be able to fill a just-started Bitcoin node with transactions from another mempool, avoiding the time necessary for a node to 'sync with the mempool'. Be aware that there is not such a thing as a global mempool, so differences between nodes are expected.
+The main purpose of mempool-server/client is to populate a newly started Bitcoin node with transactions from another mempool, bypassing the time required for the node to synchronize with the mempool. Keep in mind that there is no such thing as a global mempool, so variations between nodes are expected.
 
-The reasons you want your bitcoin node with a "full mempool" are varied, but for a regular user, the main reason is that you want to be able to estimate fees by yourself (i.e. you are using Sparrow wallet). Also, if you are a miner using Stratum v2 having a "good" mempool it's a must. Other reasons includes managing a webpage like https://mempoolexplorer.com or https://mempool.space. Also, you can bragg about how much transactions your mempool have (but be aware of [this](https://bitcoin.stackexchange.com/questions/118137/how-does-it-contribute-to-the-bitcoin-network-when-i-run-a-node-with-a-bigger-th)).
+There are various reasons why you may want your Bitcoin node to have a "full mempool." For regular users, the primary reason is to be able to estimate fees independently (e.g., when using the Sparrow wallet). Additionally, if you are a miner using Stratum v2, having a "good" mempool is essential. Other reasons include managing websites like https://mempoolexplorer.com or https://mempool.space. You can also boast about the number of transactions in your mempool (but be cautious about [this](https://bitcoin.stackexchange.com/questions/118137/how-does-it-contribute-to-the-bitcoin-network-when-i-run-a-node-with-a-bigger-th)).
 
 How does it works?
 ------------------
 
-Mempool-client asks Mempool-server for mempool transactions ordered by dependency depth and arrival time. This order prevents transactions from being rejected because their parents are not found in the mempool. Then all transactions are orderly sent to a bitcoin node via `sendrawtransaction` RPC. Async streams are used to send transactions to the bitcoin node while they are beeing received from the server.
+Mempool-client requests mempool transactions from Mempool-server, which are ordered by dependency depth and arrival time. This ordering ensures that transactions are not rejected due to missing parent transactions in the mempool. The transactions are then sent to a Bitcoin node in an orderly manner using the sendrawtransaction RPC. Asynchronous streams are used to send transactions to the Bitcoin node while they are being received from the server.
 
-Mempool-server thas two endpoints: `/mempool/txsdata` and `/mempool/txsdatafrom/{mempool_counter}`. First endpoint downloads the whole mempool up to the current moment of the query. To signal that moment, the last mempool counter is returned along with all mempool data. The second endpoint works the same, but it returns all mempool data from a mempool counter. Mempool-client calls repeatedly at the second function until the mempool counter received is equal to the asked for. This guarantees that server and client mempool are syncronized at that point (almost, due to tx collision between already-in-node transactions).
+Mempool-server thas two endpoints: `/mempool/txsdata` and `/mempool/txsdatafrom/{mempool_counter}`. The first endpoint downloads the entire mempool up to the current moment of the query. To indicate that moment, the last mempool counter is returned along with all mempool data. The second endpoint functions similarly, but it returns mempool data from a specific mempool counter. Mempool-client repeatedly calls the second function until the received mempool counter matches the requested one. This ensures that the server and client mempools are synchronized at that point (almost, except for transaction collisions between transactions already in the node).
 
-Be aware that all transactions sent via `sendrawtransaction` to bitcoind will be sent unconditionally to all your bitcoind peers. It's recommended to execute `mempool_client` only when bitcoind has just started.
+Please note that all transactions sent via `sendrawtransaction` to bitcoind will be unconditionally sent to all of your bitcoind peers. It is recommended to execute `mempool_client` only when bitcoind has just started.
 
-Mempool-client connects to Bitcoin RPC using user and password (deprecated), or using cookie authentication (default).
+Mempool-client connects to the Bitcoin RPC using a username and password (deprecated) or cookie authentication (default).
 
 ![diagram](./resources/diagram.png)
 
