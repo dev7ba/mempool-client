@@ -5,7 +5,7 @@ Mempool-client is a command-line program to ask to [mempool-server](https://gith
 
 The main purpose of mempool-server/client is to be able to fill a just-started Bitcoin node with transactions from another mempool, avoiding the time necessary for a node to 'sync with the mempool'. Be aware that there is not such a thing as a global mempool, so differences between nodes are expected.
 
-The reasons you want your bitcoin node with a "full mempool" are varied, but for a regular user, the main reason is that you want to be able to estimate fees by yourself (i.e. you are using Sparrow wallet). Also, if you are a miner using Stratum v2 having a "good" mempool it's a must. Other reasons includes managing a webpage like <mempoolexplorer.com> or <mempool.space> or bragging about how much transactions your mempool have (but be aware of [this](https://bitcoin.stackexchange.com/questions/118137/how-does-it-contribute-to-the-bitcoin-network-when-i-run-a-node-with-a-bigger-th)).
+The reasons you want your bitcoin node with a "full mempool" are varied, but for a regular user, the main reason is that you want to be able to estimate fees by yourself (i.e. you are using Sparrow wallet). Also, if you are a miner using Stratum v2 having a "good" mempool it's a must. Other reasons includes managing a webpage like [mempoolexplorer.com](mempoolexplorer.com) or [mempool.space](mempool.space). Also, you can bragg about how much transactions your mempool have (but be aware of [this](https://bitcoin.stackexchange.com/questions/118137/how-does-it-contribute-to-the-bitcoin-network-when-i-run-a-node-with-a-bigger-th)).
 
 How does it works?
 ------------------
