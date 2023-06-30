@@ -25,7 +25,7 @@ Usage
 
 If you are executing mempool-client in the same computer as bitcoind (like Sparrow Wallet), then you don't need any configuration: execute ``./mempool-client`` and wait "the" mempool to be transfered.
 
-If your execute mempool-client from other computer connected to bitcoind node via local network then you have to configure two things: 
+If your execute mempool-client from another computer connected to bitcoind node via local network then you have to configure two things: 
 
 First, you must have a `config.toml` file in the same directory as your executable with contents like the following:
 
