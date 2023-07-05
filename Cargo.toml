@@ -26,3 +26,9 @@ anyhow = "1.0"
 indicatif = "0.17.3"
 dirs = "5.0.1"
 colored = "2.0.0"
+
+[profile.release]
+strip=true # Strip symbols in binary.
+opt-level="s" # Optimize for small size.
+lto = true # Optimize but more linking time.
+codegen-units = 1 # Maximize size reduction operations.
