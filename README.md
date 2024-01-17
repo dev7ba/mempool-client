@@ -1,6 +1,8 @@
 Mempool-client
 ==============
 
+NOTE: This project may be deprecated by bitcoind RPC commands `savemempool` and `importmempool`.
+
 Mempool-client is a command-line program that requests Bitcoin mempool transactions from [mempool-server](https://github.com/dev7ba/mempool-server) and injects them into a Bitcoin node.
 
 The main purpose of mempool-server/client is to populate a newly started Bitcoin node with transactions from another mempool, bypassing the time required for the node to synchronize with the mempool. Keep in mind that there is no such thing as a global mempool, so variations between nodes are expected.
